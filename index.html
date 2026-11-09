@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#080b10">
+<meta name="description" content="NewWorld Engine — universal spatial navigation prototype">
+<title>NewWorld Engine · Prototype 0.1</title>
+<style>
+:root{color-scheme:dark;--green:#a4ff5e;--red:#ff6969}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b10;color:#f3f5f7;font-family:Inter,system-ui,Arial,sans-serif;touch-action:none;overscroll-behavior:none}
+#app,#scene{position:fixed;inset:0;overflow:hidden}#scene{display:grid;place-items:center;background:radial-gradient(ellipse at 50% 40%,#263442,#111923 48%,#080b10 100%);will-change:transform,opacity,filter}
+#scene:before{content:"";position:absolute;inset:0;opacity:.25;background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:54px 54px}
+.content{position:relative;width:min(850px,88vw);padding:24px;text-align:center;pointer-events:none}
+.orb{width:min(24vw,180px);aspect-ratio:1;border-radius:50%;margin:0 auto 34px;background:radial-gradient(circle at 34% 28%,#eaffd8,#a4ff5e 5%,#4c8c38 20%,#172a24 48%,#080b10 73%);box-shadow:0 0 90px #a4ff5e26,inset -22px -20px 38px #000b}
+.kicker{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--green);margin-bottom:22px;opacity:.85}
+h1{font-size:clamp(36px,7vw,82px);line-height:.98;letter-spacing:-.055em;margin:0 0 20px;font-weight:650}
+h2{font-size:clamp(28px,5vw,56px);line-height:1;letter-spacing:-.04em;margin:0 0 18px;font-weight:620}
+p{font-size:clamp(14px,2vw,18px);line-height:1.6;color:#c0c8d1;max-width:620px;margin:auto}
+.hint{margin-top:34px;color:#d9e0e7;font-size:11px;letter-spacing:.13em;text-transform:uppercase;opacity:.72}
+#hud,#depth{position:fixed;z-index:5;top:16px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#aab4c0;opacity:.72;pointer-events:none}
+#hud{left:18px}#depth{right:18px}
+#hintline{position:fixed;z-index:5;bottom:26px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#aeb7c1;opacity:.55;pointer-events:none}
+#nav{position:fixed;inset:0;z-index:4;pointer-events:none}.arrow{position:absolute;width:52px;height:52px;display:grid;place-items:center;color:var(--green);opacity:.7;animation:pulse 2.6s ease-in-out infinite;filter:drop-shadow(0 0 8px currentColor)}
+.arrow svg{width:27px;height:27px}.arrow path{fill:none;stroke:currentColor;stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round}
+.up{top:10px;left:calc(50% - 26px)}.down{bottom:10px;left:calc(50% - 26px)}.left{left:10px;top:calc(50% - 26px)}.right{right:10px;top:calc(50% - 26px)}
+.forward{right:22px;bottom:24px;width:36px;height:36px}.back{left:22px;bottom:24px;width:36px;height:36px;color:var(--red)}
+@keyframes pulse{0%,100%{opacity:.3;transform:scale(.94)}50%{opacity:.82;transform:scale(1.06)}}
+#veil{position:fixed;inset:0;z-index:3;background:#080b10;opacity:0;transform:scale(.2);pointer-events:none}
+#toast{position:fixed;z-index:8;top:18%;left:50%;transform:translate(-50%,-8px);padding:9px 14px;border:1px solid #ffffff20;border-radius:30px;background:#080b10dd;color:#e9edf1;font-size:12px;opacity:0;transition:.2s;pointer-events:none}#toast.show{opacity:1;transform:translate(-50%,0)}
+@media(prefers-reduced-motion:reduce){.arrow{animation:none}}
+</style></head>
+<body><div id="app"><main id="scene"></main><div id="veil"></div><div id="nav"></div><div id="hud">NEWWORLD ENGINE · PROTOTYPE 0.1</div><div id="depth"></div><div id="hintline"></div><div id="toast"></div></div>
+<script>
+(()=>{
+"use strict";
+const worlds={
+surface:{start:"landing",nodes:{
+landing:{title:"A NEW WORLD",kicker:"NewWorld Engine · Demonstration",body:"A blank canvas for connected digital experiences. Move through the space and discover how one place can lead to another.",kind:"landing",links:{down:"arrival"},depth:"inner"},
+arrival:{title:"THE FIRST HORIZON",kicker:"Surface · 01",body:"A simple test destination. Swipe up to continue downward, or move sideways to explore another branch.",links:{up:"landing",down:"threshold",right:"east-one",left:"west-one"}},
+threshold:{title:"THE OPEN FIELD",kicker:"Surface · 02",body:"This page is also a gateway to a deeper layer. Spread two fingers to enter.",links:{up:"arrival",right:"east-two",left:"west-two"},depth:"inner"},
+"east-one":{title:"EASTERN PATH",kicker:"Surface · Branch A",body:"A horizontal branch connected to the first destination.",links:{left:"arrival",right:"east-one-end"}},
+"east-one-end":{title:"FARTHER EAST",kicker:"Surface · Branch A2",body:"The current end of this small branch.",links:{left:"east-one"}},
+"west-one":{title:"WESTERN PATH",kicker:"Surface · Branch B",body:"A second horizontal branch connected to the first destination.",links:{right:"arrival",left:"west-one-end"}},
+"west-one-end":{title:"FARTHER WEST",kicker:"Surface · Branch B2",body:"The current end of this small branch.",links:{right:"west-one"}},
+"east-two":{title:"THE EASTERN GATE",kicker:"Surface · Branch C",body:"A branch from the second destination.",links:{left:"threshold",right:"east-two-end"}},
+"east-two-end":{title:"THE QUIET EDGE",kicker:"Surface · Branch C2",body:"The current end of this branch.",links:{left:"east-two"}},
+"west-two":{title:"THE WESTERN GATE",kicker:"Surface · Branch D",body:"Another branch from the second destination.",links:{right:"threshold",left:"west-two-end"}},
+"west-two-end":{title:"THE LAST LIGHT",kicker:"Surface · Branch D2",body:"The current end of this branch.",links:{right:"west-two"}}
+}},
+inner:{start:"inner-entry",nodes:{
+"inner-entry":{title:"BEYOND THE SURFACE",kicker:"Inner layer · 01",body:"A new navigation layer with its own independent two-dimensional map.",links:{down:"inner-depth",right:"inner-east"}},
+"inner-depth":{title:"A DEEPER PLACE",kicker:"Inner layer · 02",body:"Layers can contain further destinations and can open another depth.",links:{up:"inner-entry"},depth:"core"},
+"inner-east":{title:"INNER HORIZON",kicker:"Inner layer · East",body:"A sideways destination inside this layer.",links:{left:"inner-entry"}}
+}},
+core:{start:"core-entry",nodes:{"core-entry":{title:"THE CORE",kicker:"Core layer",body:"A third layer. The architecture allows further nested layers.",links:{}}}}
+};
+const $=id=>document.getElementById(id),scene=$("scene"),nav=$("nav"),veil=$("veil"),toast=$("toast");
+let layer="surface",node="landing",history=[],busy=false,pointers=new Map(),start=null,pinch=null,timer;
+const svg={up:'<svg viewBox="0 0 24 24"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>',down:'<svg viewBox="0 0 24 24"><path d="M12 5v14m-5.5-5.5L12 19l5.5-5.5"/></svg>',left:'<svg viewBox="0 0 24 24"><path d="M19 12H5m5.5-5.5L5 12l5.5 5.5"/></svg>',right:'<svg viewBox="0 0 24 24"><path d="M5 12h14m-5.5-5.5L19 12l-5.5 5.5"/></svg>'};
+const cur=()=>worlds[layer].nodes[node];
+function msg(s){toast.textContent=s;toast.classList.add("show");clearTimeout(timer);timer=setTimeout(()=>toast.classList.remove("show"),1400)}
+function esc(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function render(){
+ const n=cur();scene.innerHTML=n.kind==="landing"?`<div class="content"><div class="orb"></div><div class="kicker">${esc(n.kicker)}</div><h1>${esc(n.title)}</h1><p>${esc(n.body)}</p><div class="hint">Spread two fingers to enter</div></div>`:`<div class="content"><div class="kicker">${esc(n.kicker)}</div><h2>${esc(n.title)}</h2><p>${esc(n.body)}</p>${n.depth?'<div class="hint">A deeper layer is available · spread two fingers</div>':''}</div>`;
+ $("depth").textContent="LAYER "+layer.toUpperCase();$("hintline").textContent=n.depth?"Two fingers spread to enter depth · pinch inward to return":"Swipe to move · two fingers spread to enter depth";
+ nav.innerHTML="";for(const d of ["up","down","left","right"])if(n.links?.[d]){let a=document.createElement("div");a.className="arrow "+d;a.innerHTML=svg[d];nav.append(a)}
+ if(history.length){let b=document.createElement("div");b.className="arrow back";b.innerHTML=svg.left;nav.append(b)}
+ if(n.depth){let f=document.createElement("div");f.className="arrow forward";f.innerHTML=svg.right;nav.append(f)}
+}
+function animate(kind,fn){
+ if(busy)return;busy=true;const inward=kind==="in";
+ veil.style.transition="none";veil.style.opacity=0;veil.style.transform=inward?"scale(.15)":"scale(2.5)";
+ requestAnimationFrame(()=>{veil.style.transition="transform 520ms cubic-bezier(.2,.75,.2,1),opacity 520ms";veil.style.opacity=.9;veil.style.transform=inward?"scale(3.2)":"scale(.12)";
+ scene.style.transition="transform 520ms cubic-bezier(.2,.75,.2,1),opacity 520ms,filter 520ms";scene.style.transform=inward?"scale(1.35)":"scale(.78)";scene.style.opacity=.15;scene.style.filter="blur(12px)";
+ setTimeout(()=>{fn();scene.style.transition="none";scene.style.transform=inward?"scale(.82)":"scale(1.18)";scene.style.opacity=0;scene.style.filter="blur(10px)";veil.style.transition="none";veil.style.opacity=0;
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{scene.style.transition="transform 620ms cubic-bezier(.16,.78,.22,1),opacity 620ms,filter 620ms";scene.style.transform="scale(1)";scene.style.opacity=1;scene.style.filter="blur(0)";setTimeout(()=>busy=false,640)}))},520)});
+}
+function move(d){if(busy)return;let target=cur().links?.[d];if(!target)return msg("No path in this direction");history.push({layer,node});animate("flat",()=>{node=target;render()})}
+function enter(){if(busy)return;let next=cur().depth;if(!next)return msg("No deeper layer here");history.push({layer,node});animate("in",()=>{layer=next;node=worlds[layer].start;render()})}
+function exit(){if(busy)return;if(layer==="surface")return msg("Already at the outer layer");let idx=-1;for(let i=history.length-1;i>=0;i--)if(history[i].layer!==layer){idx=i;break}if(idx<0)return msg("No outer layer in this path");animate("out",()=>{let s=history[idx];history=history.slice(0,idx);layer=s.layer;node=s.node;render()})}
+function back(){if(busy)return;if(!history.length)return msg("No previous page");let s=history[history.length-1];animate(s.layer===layer?"flat":"out",()=>{history.pop();layer=s.layer;node=s.node;render()})}
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),pt=e=>({x:e.clientX,y:e.clientY});
+document.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"&&e.button!==0)return;pointers.set(e.pointerId,pt(e));try{e.target.setPointerCapture(e.pointerId)}catch(_){}if(pointers.size===1)start=pt(e);if(pointers.size===2){let p=[...pointers.values()];pinch=dist(p[0],p[1]);start=null}},{passive:false});
+document.addEventListener("pointermove",e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,pt(e));if(pointers.size===2&&pinch!==null){let p=[...pointers.values()],d=dist(p[0],p[1]);if(d-pinch>65){pointers.clear();pinch=null;enter()}else if(pinch-d>65){pointers.clear();pinch=null;exit()}}},{passive:false});
+function end(e){if(!pointers.has(e.pointerId))return;let q=pt(e);if(pointers.size===1&&start){let dx=q.x-start.x,dy=q.y-start.y;if(Math.max(Math.abs(dx),Math.abs(dy))>48){if(Math.abs(dx)>Math.abs(dy))move(dx<0?"right":"left");else move(dy<0?"down":"up")}}pointers.delete(e.pointerId);if(pointers.size<2)pinch=null;if(!pointers.size)start=null}
+document.addEventListener("pointerup",end,{passive:false});document.addEventListener("pointercancel",end,{passive:false});
+document.addEventListener("keydown",e=>{if(e.key==="ArrowUp")move("up");if(e.key==="ArrowDown")move("down");if(e.key==="ArrowLeft")move("left");if(e.key==="ArrowRight")move("right");if(e.key==="Escape"||e.key==="Backspace"){e.preventDefault();back()}if(e.key==="Enter"&&cur().depth)enter()});
+render();
+})();
+</script></body></html>
